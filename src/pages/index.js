@@ -1,0 +1,11 @@
+export { default as Home } from './Home';
+export { default as Login } from './Login';
+export { default as Signup } from './Signup';
+export { default as Profile } from './Profile';
+export { default as Schemes } from './Schemes';
+export { default as Jobs } from './Jobs';
+export { default as Search } from './Search';
+export { default as Admin } from './Admin';
+export { default as SchemeDetail } from './SchemeDetail';
+export { default as Analytics } from './Analytics';
+export { default as TestPage } from './TestPage'; 

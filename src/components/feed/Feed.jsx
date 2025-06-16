@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { Heart, MessageCircle, Share2 } from "lucide-react";
+import { Heart, MessageCircle, Share2, Trash2 } from "lucide-react";
+import PostImageGrid from "../common/createPost/PostImageGrid";
 
 export default function Feed() {
   const [feed, setFeed] = useState([]);
@@ -38,6 +39,47 @@ export default function Feed() {
     fetchData();
   }, []);
 
+  const handleDeletePost = async (id) => {
+    const confirm = window.confirm("Bạn có chắc chắn muốn xoá bài viết này?");
+    if (!confirm) return;
+
+    try {
+      await axios.delete(
+        `http://localhost:3000/api/posts/DeletePostById/${id}`
+      );
+      setFeed((prev) => prev.filter((item) => item._id !== id));
+      alert("\u2705 Đã xoá bài viết");
+    } catch (error) {
+      console.error("\u274c Lỗi khi xoá bài viết:", error);
+      alert("\u274c Xoá bài thất bại");
+    }
+  };
+
+  if (!feed.length) {
+    return (
+      <div className="text-center text-gray-500 py-8">
+        \u0110ang tải dữ liệu...
+      </div>
+    );
+  }
+
+  const renderAttachments = (attachments) =>
+    attachments?.length > 0 && (
+      <div className="mt-2 space-y-1">
+        {attachments.map((att, i) => (
+          <a
+            key={att._id || i}
+            href={att.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block text-blue-600 underline"
+          >
+            📎 {att.filename}
+          </a>
+        ))}
+      </div>
+    );
+
   return (
     <div className="flex flex-col gap-8 p-4">
       {feed.map((item) => (
@@ -45,7 +87,6 @@ export default function Feed() {
           key={item._id}
           className="bg-white rounded-2xl shadow-md p-6 flex flex-col gap-4 hover:shadow-xl transition-all"
         >
-          {/* Header */}
           <div className="flex items-center gap-4">
             <img
               src={
@@ -53,117 +94,71 @@ export default function Feed() {
                 "https://randomuser.me/api/portraits/lego/1.jpg"
               }
               alt="avatar"
-              className="w-12 h-12 rounded-full"
+              className="w-12 h-12 rounded-full object-cover"
             />
-            <div>
+            <div className="flex-1">
               <div className="font-bold text-lg">
-                {item.user_id?.name || "Ẩn danh"}
+                {item.user_id?.name || "\u1ea8n danh"}
               </div>
               <div className="text-gray-400 text-sm">
                 {new Date(item.createdAt).toLocaleString("vi-VN")}
               </div>
             </div>
+            {item.type === "post" && (
+              <button
+                onClick={() => handleDeletePost(item._id)}
+                className="text-red-500 hover:text-red-700 transition"
+                title="Xoá bài viết"
+              >
+                <Trash2 size={18} />
+              </button>
+            )}
           </div>
 
-          {/* Content */}
           {item.type === "post" ? (
             <>
-              <div className="text-gray-800 text-base">{item.content}</div>
-              {item.images?.length > 0 && (
-                <img
-                  src={item.images[0]}
-                  alt="image"
-                  className="rounded-xl w-full object-cover max-h-60"
-                />
-              )}
-              {item.attachments?.length > 0 && (
-                <div className="mt-2 space-y-1">
-                  {item.attachments.map((att) => (
-                    <a
-                      key={att._id}
-                      href={att.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block text-blue-600 underline"
+              <div className="text-gray-800 text-base whitespace-pre-line">
+                {item.content}
+              </div>
+              {item.tags?.length > 0 && (
+                <div className="flex gap-2 flex-wrap mt-1">
+                  {item.tags.map((tag, i) => (
+                    <span
+                      key={i}
+                      className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full"
                     >
-                      📎 {att.filename}
-                    </a>
+                      #{tag}
+                    </span>
                   ))}
                 </div>
               )}
+              <PostImageGrid images={item.images} />
+              {renderAttachments(item.attachments)}
               <div className="flex gap-8 mt-2 text-gray-500">
                 <button className="flex items-center gap-2 hover:text-red-500 transition">
-                  <Heart size={20} /> {item.likeCount} Thích
+                  <Heart size={20} /> {item.likeCount || 0} Thích
                 </button>
                 <button className="flex items-center gap-2 hover:text-blue-500 transition">
-                  <MessageCircle size={20} /> {item.commentCount} Bình luận
+                  <MessageCircle size={20} /> {item.commentCount || 0} Bình luận
                 </button>
                 <button className="flex items-center gap-2 hover:text-green-500 transition">
                   <Share2 size={20} /> Chia sẻ
                 </button>
               </div>
-              {item.comments?.length > 0 && (
-                <div className="mt-3 space-y-3">
-                  {item.comments.map((comment) => (
-                    <div key={comment._id} className="flex gap-3 items-start">
-                      <img
-                        src={
-                          comment.userId?.avatar ||
-                          "https://randomuser.me/api/portraits/lego/2.jpg"
-                        }
-                        alt="avatar"
-                        className="w-8 h-8 rounded-full"
-                      />
-                      <div className="bg-gray-100 rounded-xl px-4 py-2 w-full">
-                        <div className="text-sm font-semibold text-gray-700">
-                          {comment.userId?.name || "Ẩn danh"}
-                        </div>
-                        <div className="text-gray-700 text-sm">
-                          {comment.content}
-                        </div>
-                        <div className="text-xs text-gray-400 mt-1">
-                          {new Date(comment.createdAt).toLocaleString("vi-VN")}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </>
           ) : (
             <>
-              {/* JOB POST */}
               <div className="text-gray-900 font-bold text-lg">
                 {item.title}
               </div>
               <div className="text-gray-600 text-sm italic">
                 {item.company_name} – {item.location}
               </div>
-              <div className="text-gray-700 text-base mt-1">
+              <div className="text-gray-700 text-base mt-1 whitespace-pre-line">
                 {item.description}
               </div>
-              {item.images?.length > 0 && (
-                <img
-                  src={item.images[0]}
-                  alt="job"
-                  className="rounded-xl w-full object-cover max-h-60"
-                />
-              )}
-              {item.attachments?.length > 0 && (
-                <div className="mt-2 space-y-1">
-                  {item.attachments.map((att, i) => (
-                    <a
-                      key={i}
-                      href={att.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block text-blue-600 underline"
-                    >
-                      📎 {att.filename}
-                    </a>
-                  ))}
-                </div>
-              )}
+              <PostImageGrid images={item.images} />
+              {renderAttachments(item.attachments)}
               <div className="text-sm text-gray-500 mt-2">
                 💰 {item.salary_range?.min?.toLocaleString()} –{" "}
                 {item.salary_range?.max?.toLocaleString()} USD

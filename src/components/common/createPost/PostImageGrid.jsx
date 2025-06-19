@@ -1,4 +1,3 @@
-// src/components/common/createPost/PostImageGrid.jsx
 import React, { useState } from "react";
 import { Dialog } from "@headlessui/react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
@@ -38,7 +37,11 @@ export default function PostImageGrid({ images = [] }) {
             <img
               src={src}
               alt={`img-${index}`}
-              className="w-full h-60 object-cover rounded-md"
+              className={`w-full rounded-md ${
+                images.length === 1
+                  ? "object-contain max-h-[500px]"
+                  : "h-60 object-cover"
+              }`}
             />
             {index === 3 && images.length > 5 && (
               <div className="absolute inset-0 bg-black bg-opacity-50 text-white flex items-center justify-center text-2xl font-bold rounded-md">
@@ -59,7 +62,7 @@ export default function PostImageGrid({ images = [] }) {
           </button>
           <img
             src={images[current]}
-            className="max-h-[80vh] max-w-[90vw] rounded-xl"
+            className="max-h-[90vh] max-w-[95vw] rounded-xl object-contain"
           />
           <button onClick={next} className="absolute right-6 text-white">
             <ChevronRight size={32} />

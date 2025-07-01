@@ -31,13 +31,22 @@ const validationSchema = Yup.object({
     .required("Please confirm your password"),
   location: Yup.string(),
   agreeToTerms: Yup.boolean()
-    .oneOf([true], "You must agree to the terms and conditions")
+    .oneOf([true], "You must agree to the terms and conditions"),
+  role: Yup.string()
+    .oneOf(["user", "employer"], "Invalid role")
 });
+
+const publicDomains = [
+  "gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "aol.com", "icloud.com", "zoho.com", "protonmail.com", "mail.com", "gmx.com"
+];
 
 export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
+  const [emailError, setEmailError] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   // Hàm viết hoa chữ cái đầu
   const capitalizeFirstLetter = (str) => {
@@ -54,19 +63,37 @@ export default function Signup() {
     password: "",
     confirmPassword: "",
     location: "",
-    agreeToTerms: false
+    agreeToTerms: false,
+    role: "user"
   };
 
   // Handle submit
   const handleSubmit = async (values, { setSubmitting, setFieldError }) => {
+    setLoading(true);
+    setMessage("");
     try {
-      const { firstName, lastName, email, phone, password, location } = values;
-      await registerUser({ firstName, lastName, email, phone, password, location });
+      const { firstName, lastName, email, password, role, phone, location } = values;
+      
+      // Gửi dữ liệu trực tiếp theo format frontend
+      const userData = {
+        firstName,
+        lastName,
+        email,
+        password,
+        role,
+        phone,
+        location
+      };
+      
+      await registerUser(userData);
+      setMessage("Đăng ký thành công! Hãy đăng nhập.");
       navigate("/login");
     } catch (err) {
       setFieldError("general", err.response?.data?.message || "Đăng ký thất bại");
+      setMessage("Lỗi kết nối máy chủ.");
     } finally {
       setSubmitting(false);
+      setLoading(false);
     }
   };
 
@@ -158,15 +185,36 @@ export default function Signup() {
                     </label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Field
-                        as={Input}
-                        id="email"
-                        name="email"
-                        type="email"
-                        placeholder="Enter your email"
-                        className="pl-10"
-                      />
+                      <Field name="email">
+                        {({ field, form }) => (
+                          <Input
+                            {...field}
+                            id="email"
+                            type="email"
+                            placeholder="Enter your email"
+                            className="pl-10"
+                            value={field.value}
+                            onChange={e => {
+                              form.setFieldValue('email', e.target.value);
+                              // Kiểm tra domain email nếu role là employer
+                              const role = form.values.role;
+                              const email = e.target.value;
+                              if (role === 'employer' && email.includes('@')) {
+                                const domain = email.split('@')[1].toLowerCase();
+                                if (publicDomains.includes(domain)) {
+                                  setEmailError('Nhà tuyển dụng phải dùng email công ty, không dùng email công cộng.');
+                                } else {
+                                  setEmailError('');
+                                }
+                              } else {
+                                setEmailError('');
+                              }
+                            }}
+                          />
+                        )}
+                      </Field>
                     </div>
+                    {emailError && <div className="text-xs text-red-600">{emailError}</div>}
                     <ErrorMessage name="email" component="p" className="text-xs text-red-600" />
                   </div>
 
@@ -267,6 +315,42 @@ export default function Signup() {
                     <ErrorMessage name="confirmPassword" component="p" className="text-xs text-red-600" />
                   </div>
 
+                  {/* Role Field */}
+                  <div className="space-y-2">
+                    <label htmlFor="role" className="text-sm font-medium text-gray-700">
+                      I am a:
+                    </label>
+                    <Field name="role">
+                      {({ field, form }) => (
+                        <select
+                          {...field}
+                          id="role"
+                          className="pl-10"
+                          value={field.value}
+                          onChange={e => {
+                            form.setFieldValue('role', e.target.value);
+                            // Kiểm tra lại email khi đổi role
+                            const email = form.values.email;
+                            const role = e.target.value;
+                            if (role === 'employer' && email.includes('@')) {
+                              const domain = email.split('@')[1].toLowerCase();
+                              if (publicDomains.includes(domain)) {
+                                setEmailError('Nhà tuyển dụng phải dùng email công ty, không dùng email công cộng.');
+                              } else {
+                                setEmailError('');
+                              }
+                            } else {
+                              setEmailError('');
+                            }
+                          }}
+                        >
+                          <option value="user">Job Seeker</option>
+                          <option value="employer">Employer</option>
+                        </select>
+                      )}
+                    </Field>
+                  </div>
+
                   {/* Terms Agreement */}
                   <div className="flex items-start space-x-2">
                     <Field
@@ -292,9 +376,9 @@ export default function Signup() {
                   <Button
                     type="submit"
                     className="w-full"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || !!emailError || loading}
                   >
-                    {isSubmitting ? "Creating Account..." : "Create Account"}
+                    {loading ? "Creating Account..." : "Create Account"}
                   </Button>
 
                   {/* General Error */}
@@ -342,6 +426,9 @@ export default function Signup() {
                 Sign in
               </Link>
             </div>
+
+            {/* Message */}
+            {message && <div className="mt-6 text-center text-sm text-green-600">{message}</div>}
           </CardContent>
         </Card>
       </div>

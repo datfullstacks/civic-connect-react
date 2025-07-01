@@ -1,5 +1,7 @@
-import React, { useState } from "react";
-import Header from "../components/header";
+import React, { useState, useEffect } from "react";
+import Header from "../components/Header";
+import { useAuth } from "../context/AuthContext";
+import { usersAPI } from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -20,15 +22,89 @@ import {
 
 export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [updateLoading, setUpdateLoading] = useState(false);
+  const { user } = useAuth();
   const [userData, setUserData] = useState({
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+1 (555) 123-4567",
-    location: "New York, NY",
-    bio: "Community enthusiast passionate about civic engagement and local development.",
-    joinDate: "January 2024",
-    role: "Community Member"
+    name: "",
+    email: "",
+    phone: "",
+    location: "",
+    bio: "",
+    joinDate: "",
+    role: ""
   });
+
+  // Load user profile data
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (user) {
+        try {
+          const response = await usersAPI.getProfile();
+          const profileData = response.data.user;
+          
+          setUserData({
+            name: profileData.name || "",
+            email: profileData.email || "",
+            phone: profileData.phone || "",
+            location: profileData.location || "",
+            bio: profileData.bio || "",
+            joinDate: profileData.createdAt ? new Date(profileData.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : "",
+            role: profileData.role === 'user' ? 'Job Seeker' : profileData.role === 'employer' ? 'Employer' : 'Admin'
+          });
+        } catch (error) {
+          console.error('Failed to load profile:', error);
+          // Fallback to user data from AuthContext
+          setUserData({
+            name: user.name || "",
+            email: user.email || "",
+            phone: user.phone || "",
+            location: user.location || "",
+            bio: user.bio || "",
+            joinDate: user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : "",
+            role: user.role === 'user' ? 'Job Seeker' : user.role === 'employer' ? 'Employer' : 'Admin'
+          });
+        }
+        setIsLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [user]);
+
+  const handleSaveProfile = async () => {
+    setUpdateLoading(true);
+    try {
+      const updateData = {
+        name: userData.name,
+        phone: userData.phone,
+        location: userData.location,
+        bio: userData.bio
+      };
+      
+      await usersAPI.updateProfile(updateData);
+      setIsEditing(false);
+      alert('Profile updated successfully!');
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      alert('Failed to update profile. Please try again.');
+    }
+    setUpdateLoading(false);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <Header />
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading profile...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -54,7 +130,16 @@ export default function Profile() {
               {/* User Info */}
               <div className="flex-1 text-center md:text-left">
                 <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4">
-                  <h1 className="text-3xl font-bold text-gray-900">{userData.name}</h1>
+{isEditing ? (
+                    <Input 
+                      value={userData.name} 
+                      onChange={(e) => setUserData({...userData, name: e.target.value})}
+                      className="text-3xl font-bold text-gray-900 border-2 border-blue-200"
+                      placeholder="Enter your name..."
+                    />
+                  ) : (
+                    <h1 className="text-3xl font-bold text-gray-900">{userData.name}</h1>
+                  )}
                   <Button
                     variant="outline"
                     onClick={() => setIsEditing(!isEditing)}
@@ -65,7 +150,16 @@ export default function Profile() {
                   </Button>
                 </div>
                 
-                <p className="text-gray-600 mb-4">{userData.bio}</p>
+{isEditing ? (
+                  <Input 
+                    value={userData.bio} 
+                    onChange={(e) => setUserData({...userData, bio: e.target.value})}
+                    placeholder="Enter your bio..."
+                    className="mb-4"
+                  />
+                ) : (
+                  <p className="text-gray-600 mb-4">{userData.bio || "No bio added yet."}</p>
+                )}
                 
                 <div className="flex flex-wrap gap-4 text-sm text-gray-500">
                   <div className="flex items-center gap-1">
@@ -141,7 +235,13 @@ export default function Profile() {
                   )}
                 </div>
                 {isEditing && (
-                  <Button className="w-full">Save Changes</Button>
+                  <Button 
+                    className="w-full" 
+                    onClick={handleSaveProfile}
+                    disabled={updateLoading}
+                  >
+                    {updateLoading ? 'Saving...' : 'Save Changes'}
+                  </Button>
                 )}
               </CardContent>
             </Card>

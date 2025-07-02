@@ -5,6 +5,7 @@ export { default as Profile } from './Profile';
 export { default as Schemes } from './Schemes';
 export { default as Jobs } from './Jobs';
 export { default as Search } from './Search';
+export { default as Chat } from './Chat';
 export { default as Admin } from './Admin';
 export { default as SchemeDetail } from './SchemeDetail';
 export { default as Analytics } from './Analytics';

@@ -91,8 +91,9 @@ export function AuthProvider({ children }) {
             type: AUTH_ACTIONS.SET_USER,
             payload: { user: response.data.user },
           });
-        } catch (error) {
+        } catch (err) {
           // Token is invalid, clear storage
+          console.error('Token verification failed:', err);
           localStorage.removeItem('accessToken');
           localStorage.removeItem('user');
           dispatch({
@@ -116,7 +117,18 @@ export function AuthProvider({ children }) {
 
     try {
       const response = await authAPI.login(credentials);
+      
+      // Check if response has the expected structure
+      if (!response.data) {
+        throw new Error('Invalid response from server');
+      }
+      
       const { user, tokens } = response.data;
+
+      // Validate required data
+      if (!user || !tokens) {
+        throw new Error('Missing user data or tokens in response');
+      }
 
       // Save tokens and user data
       localStorage.setItem('accessToken', tokens.accessToken);
@@ -128,12 +140,39 @@ export function AuthProvider({ children }) {
       });
 
       return { success: true, user };
-    } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Login failed';
+    } catch (err) {
+      console.error('Login error details:', err);
+      
+      let errorMessage = 'Login failed';
+      
+      // Handle different error types
+      if (err.response) {
+        // Server responded with error status
+        const serverMessage = err.response.data?.message;
+        if (serverMessage) {
+          errorMessage = serverMessage;
+        } else if (err.response.status === 401) {
+          errorMessage = 'Invalid email or password';
+        } else if (err.response.status === 429) {
+          errorMessage = 'Too many login attempts. Please try again later.';
+        } else if (err.response.status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        } else {
+          errorMessage = `Error ${err.response.status}: ${err.response.statusText}`;
+        }
+      } else if (err.request) {
+        // Network error
+        errorMessage = 'Network error. Please check your connection and try again.';
+      } else if (err.message) {
+        // Other errors
+        errorMessage = err.message;
+      }
+      
       dispatch({
         type: AUTH_ACTIONS.LOGIN_FAILURE,
         payload: { error: errorMessage },
       });
+      
       return { success: false, error: errorMessage };
     }
   };

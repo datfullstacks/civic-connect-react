@@ -21,6 +21,7 @@ const validationSchema = Yup.object({
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [loginError, setLoginError] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
@@ -31,9 +32,12 @@ const Login = () => {
     password: ""
   };
 
-  // Handle submit
+  // Handle submit - FIX: Prevent page reload and better error handling
   const handleSubmit = async (values, { setSubmitting, setFieldError }) => {
     try {
+      setLoginError(""); // Clear previous errors
+      setSubmitting(true);
+      
       const result = await login(values);
       
       if (result.success) {
@@ -49,10 +53,15 @@ const Login = () => {
           navigate(from, { replace: true });
         }
       } else {
-        setFieldError("general", result.error || "Đăng nhập thất bại.");
+        // Set error message without reloading page
+        const errorMsg = result.error || "Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.";
+        setLoginError(errorMsg);
+        setFieldError("general", errorMsg);
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.message || "Lỗi kết nối máy chủ.";
+      console.error("Login error:", err);
+      const errorMessage = err.response?.data?.message || err.message || "Lỗi kết nối máy chủ. Vui lòng thử lại.";
+      setLoginError(errorMessage);
       setFieldError("general", errorMessage);
     } finally {
       setSubmitting(false);
@@ -87,7 +96,17 @@ const Login = () => {
             >
               {({ isSubmitting }) => (
                 <Form className="space-y-4">
-                  {/* General Error Message */}
+                  {/* General Error Message - Enhanced styling */}
+                  {loginError && (
+                    <div className="flex items-start space-x-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+                      <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-red-800">Đăng nhập thất bại</p>
+                        <p className="text-xs text-red-700 mt-1">{loginError}</p>
+                      </div>
+                    </div>
+                  )}
+                  
                   <ErrorMessage name="general">
                     {msg => (
                       <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-md">
@@ -112,6 +131,7 @@ const Login = () => {
                         placeholder="Enter your email"
                         className="pl-10"
                         disabled={isSubmitting}
+                        autoComplete="email"
                       />
                     </div>
                     <ErrorMessage name="email" component="p" className="text-xs text-red-600" />
@@ -132,12 +152,14 @@ const Login = () => {
                         placeholder="Enter your password"
                         className="pl-10 pr-10"
                         disabled={isSubmitting}
+                        autoComplete="current-password"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                        className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 focus:outline-none"
                         disabled={isSubmitting}
+                        tabIndex={-1}
                       >
                         {showPassword ? (
                           <EyeOff className="h-4 w-4" />

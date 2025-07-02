@@ -3,6 +3,7 @@ import { X, Check, CheckCheck } from 'lucide-react';
 import { useSocket } from '../../context/SocketContext';
 import { chatAPI } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
+import { createPortal } from 'react-dom';
 
 export default function ChatPopup({ user, chatId, onClose }) {
   const { user: currentUser } = useAuth();
@@ -97,10 +98,10 @@ export default function ChatPopup({ user, chatId, onClose }) {
     }
   };
 
-  return (
-    <div className={`fixed top-auto right-0 w-80 max-w-[calc(100vw-16px)] ${
+  return createPortal(
+    <div className={`fixed bottom-0 right-4 w-80 max-w-[calc(100vw-32px)] ${
       isMinimized ? 'h-14' : 'h-[500px]'
-    } max-h-[calc(100vh-16px)] bg-white shadow-2xl rounded-tl-lg flex flex-col z-[9999] border border-gray-200 transition-all duration-300`}>
+    } max-h-[calc(100vh-32px)] bg-white shadow-2xl rounded-tl-lg flex flex-col z-[9999] border border-gray-200 transition-all duration-300`}>
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b bg-gradient-to-r from-blue-600 to-blue-700 rounded-tl-lg shrink-0">
         <div 
@@ -204,6 +205,7 @@ export default function ChatPopup({ user, chatId, onClose }) {
           </form>
         </>
       )}
-    </div>
+    </div>,
+    document.body
   );
 } 

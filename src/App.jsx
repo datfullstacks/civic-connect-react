@@ -1,10 +1,14 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { SocketProvider } from "./context/SocketContext";
+
+// CRITICAL: Import Login and Signup directly (NO lazy loading for auth pages)
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+
+// Other pages can use regular imports
 import {
   Home,
-  Login,
-  Signup,
   Profile,
   Schemes,
   Jobs,
@@ -44,7 +48,7 @@ export default function App() {
             {/* <Header /> */}
             <main className="min-h-screen">
             <Routes>
-              {/* Public routes */}
+              {/* Public routes - NO LAZY LOADING for auth pages */}
               <Route 
                 path="/login" 
                 element={

@@ -29,15 +29,18 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-
-    // Prevent infinite loop: if refresh endpoint itself fails, logout
-    if (originalRequest.url?.includes('/api/auth/refresh')) {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+    const url = originalRequest?.url || '';
+    // Early return for login/register 401 (do not reload page)
+    if (url.includes('auth/login') || url.includes('auth/register')) {
       return Promise.reject(error);
     }
-
+    // Prevent infinite loop: if refresh endpoint itself fails, logout
+    if (url.includes('auth/refresh')) {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
+      // window.location.href = '/login'; // Commented out for debug
+      return Promise.reject(error);
+    }
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
@@ -49,7 +52,7 @@ api.interceptors.response.use(
       } catch (refreshError) {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('user');
-        window.location.href = '/login';
+        // window.location.href = '/login'; // Commented out for debug
         return Promise.reject(refreshError);
       }
     }
